@@ -1,0 +1,124 @@
+// Campus Placement Management System Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Students {
+  id           Int           @id @default(autoincrement())
+  rollNo       String        @unique
+  name         String
+  email        String        @unique
+  phone        String
+  year         String        // "Final" or "Pre-Final"
+  department   String        // "Computer Science", "IT", etc.
+  fcmToken     String?       // For push notifications
+  pushNotifications Boolean   @default(true)
+  emailNotifications Boolean  @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  applications Application[]
+  savedJobs    SavedJob[]
+
+  @@index([email])
+  @@index([year])
+  @@index([department])
+}
+
+model Coordinators {
+  id         Int      @id @default(autoincrement())
+  name       String
+  email      String   @unique
+  password   String   // Hashed with bcrypt
+  role       String   @default("Coordinator")
+  department String
+  createdAt  DateTime @default(now())
+  jobs       Job[]
+
+  @@index([email])
+}
+
+model Job {
+  id           Int           @id @default(autoincrement())
+  title        String
+  company      String
+  description  String        @db.Text
+  skills       String[]      // Array of strings
+  deadline     DateTime
+  targetYears  String[]      // ["Final", "Pre-Final"]
+  targetDepts  String[]      // ["Computer Science", "IT"]
+  mandatory    Boolean       @default(false)
+  externalLink String
+  location     String?
+  ctc          String?       // "8 LPA" or "Unpaid Internship"
+  postedBy     Int
+  coordinator  Coordinators  @relation(fields: [postedBy], references: [id])
+  deletedAt    DateTime?     // For soft delete
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  applications Application[]
+  savedJobs    SavedJob[]
+
+  @@index([deadline])
+  @@index([postedBy])
+}
+
+model Application {
+  id        Int       @id @default(autoincrement())
+  studentId Int
+  student   Students  @relation(fields: [studentId], references: [id])
+  jobId     Int
+  job       Job       @relation(fields: [jobId], references: [id])
+  status    String    @default("Applied") // "Applied", "Interview", "Offer", "Rejected"
+  notes     String?   @db.Text
+  deletedAt DateTime? // For soft delete
+  appliedAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([studentId, jobId])
+  @@index([studentId])
+  @@index([jobId])
+  @@index([status])
+}
+
+model SavedJob {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  student   Students @relation(fields: [studentId], references: [id])
+  jobId     Int
+  job       Job      @relation(fields: [jobId], references: [id])
+  savedAt   DateTime @default(now())
+
+  @@unique([studentId, jobId])
+  @@index([studentId])
+}
+
+model OTP {
+  id        Int      @id @default(autoincrement())
+  email     String
+  otp       String   // 6-digit code
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  userType  String   // "Student" or "Coordinator"
+  action    String   // "login", "job_created", "application_submitted"
+  details   String?  @db.Text
+  ipAddress String?
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([userType])
+  @@index([action])
+}
