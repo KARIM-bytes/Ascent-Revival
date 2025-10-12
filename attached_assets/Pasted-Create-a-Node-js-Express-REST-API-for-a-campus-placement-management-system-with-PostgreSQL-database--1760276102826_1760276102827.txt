@@ -1,0 +1,190 @@
+Create a Node.js Express REST API for a campus placement management system with PostgreSQL database.
+
+PROJECT REQUIREMENTS:
+
+1. TECH STACK:
+   - Node.js with Express.js framework
+   - PostgreSQL database with Prisma ORM
+   - TypeScript (or JavaScript with JSDoc)
+   - Environment variables with dotenv
+   - CORS enabled for cross-origin requests
+
+2. PROJECT STRUCTURE:
+   server/
+   ├── index.js (main Express app)
+   ├── routes/
+   │   ├── auth.js
+   │   ├── jobs.js
+   │   └── applications.js
+   ├── controllers/
+   │   ├── authController.js
+   │   ├── jobController.js
+   │   └── applicationController.js
+   ├── middleware/
+   │   ├── auth.js (JWT verification)
+   │   ├── errorHandler.js
+   │   └── logger.js
+   ├── utils/
+   │   └── validators.js
+   └── config/
+       └── database.js
+
+   prisma/
+   ├── schema.prisma
+   └── seed.js
+
+3. DATABASE SCHEMA (Prisma):
+
+   model Students {
+     id          Int      @id @default(autoincrement())
+     rollNo      String   @unique
+     name        String
+     email       String   @unique
+     phone       String
+     year        String   // "Final" or "Pre-Final"
+     department  String   // "Computer Science", "IT", etc.
+     fcmToken    String?  // For push notifications
+     createdAt   DateTime @default(now())
+     updatedAt   DateTime @updatedAt
+     applications Application[]
+     savedJobs   SavedJob[]
+   }
+
+   model Coordinators {
+     id         Int      @id @default(autoincrement())
+     name       String
+     email      String   @unique
+     password   String   // Hashed with bcrypt
+     role       String   @default("Coordinator")
+     department String
+     createdAt  DateTime @default(now())
+     jobs       Job[]
+   }
+
+   model Job {
+     id            Int      @id @default(autoincrement())
+     title         String
+     company       String
+     description   String   @db.Text
+     skills        String[] // Array of strings
+     deadline      DateTime
+     targetYears   String[] // ["Final", "Pre-Final"]
+     targetDepts   String[] // ["Computer Science", "IT"]
+     mandatory     Boolean  @default(false)
+     externalLink  String
+     location      String?
+     ctc           String?  // "8 LPA" or "Unpaid Internship"
+     postedBy      Int
+     coordinator   Coordinators @relation(fields: [postedBy], references: [id])
+     createdAt     DateTime @default(now())
+     updatedAt     DateTime @updatedAt
+     applications  Application[]
+     savedJobs     SavedJob[]
+   }
+
+   model Application {
+     id           Int      @id @default(autoincrement())
+     studentId    Int
+     student      Students @relation(fields: [studentId], references: [id])
+     jobId        Int
+     job          Job      @relation(fields: [jobId], references: [id])
+     status       String   @default("Applied") // "Applied", "Interview", "Offer", "Rejected"
+     notes        String?  @db.Text
+     appliedAt    DateTime @default(now())
+     updatedAt    DateTime @updatedAt
+     @@unique([studentId, jobId]) // Prevent duplicate applications
+   }
+
+   model SavedJob {
+     id        Int      @id @default(autoincrement())
+     studentId Int
+     student   Students @relation(fields: [studentId], references: [id])
+     jobId     Int
+     job       Job      @relation(fields: [jobId], references: [id])
+     savedAt   DateTime @default(now())
+     @@unique([studentId, jobId])
+   }
+
+   model OTP {
+     id        Int      @id @default(autoincrement())
+     email     String
+     otp       String   // 6-digit code
+     expiresAt DateTime
+     verified  Boolean  @default(false)
+     createdAt DateTime @default(now())
+   }
+
+   model AuditLog {
+     id        Int      @id @default(autoincrement())
+     userId    Int
+     userType  String   // "Student" or "Coordinator"
+     action    String   // "login", "job_created", "application_submitted"
+     details   String?  @db.Text
+     ipAddress String?
+     timestamp DateTime @default(now())
+   }
+
+4. CORE API ENDPOINTS (implement these):
+
+   Health Check:
+   - GET /health → { status: "ok", timestamp: "..." }
+
+   Basic CRUD examples:
+   - GET /api/students → List all students (with pagination)
+   - GET /api/students/:id → Get student by ID
+   - GET /api/jobs → List all jobs (with filters)
+   - GET /api/jobs/:id → Get job by ID
+
+5. MIDDLEWARE SETUP:
+   - CORS: Allow requests from http://localhost:5173 and http://localhost:3001
+   - Body Parser: JSON parsing
+   - Error Handling: Catch-all error handler
+   - Request Logger: Log all incoming requests
+   - Rate Limiting: Max 100 requests per 15 minutes per IP
+
+6. ENVIRONMENT VARIABLES (.env.example):
+   DATABASE_URL=postgresql://user:password@localhost:5432/campus_placement
+   JWT_SECRET=your-secret-key-change-in-production
+   PORT=3000
+   NODE_ENV=development
+
+7. PACKAGE.JSON SCRIPTS:
+   - "start": "node server/index.js"
+   - "dev": "nodemon server/index.js"
+   - "prisma:generate": "prisma generate"
+   - "prisma:migrate": "prisma migrate dev"
+   - "prisma:seed": "node prisma/seed.js"
+
+8. SEED DATA (prisma/seed.js):
+   Create sample data:
+   - 3 students (Final Year CS, Pre-Final IT, Final Year ECE)
+   - 1 coordinator
+   - 5 jobs (mix of mandatory/optional, different departments)
+   - 2 sample applications
+
+9. VALIDATION:
+   - Use Joi or Zod for input validation
+   - Validate email format, phone numbers
+   - Sanitize inputs to prevent SQL injection
+
+10. ERROR RESPONSES (standardized format):
+    {
+      "error": true,
+      "message": "Descriptive error message",
+      "statusCode": 400,
+      "timestamp": "2025-10-12T10:30:00Z"
+    }
+
+IMPORTANT NOTES:
+- Use async/await for all database operations
+- Add try-catch blocks in all controllers
+- Return proper HTTP status codes (200, 201, 400, 401, 404, 500)
+- Add comments explaining complex logic
+- Keep controllers thin, business logic in separate service files if needed
+- Make sure Prisma schema has proper relations and indexes
+
+OUTPUT:
+- Complete working Express server
+- Prisma schema ready to migrate
+- All files with proper imports
+- README.md with setup instructions

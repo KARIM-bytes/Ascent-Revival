@@ -1,0 +1,178 @@
+Add push notifications, email service, and admin features to Campus Placement API.
+
+CONTEXT:
+Core features working. Now add notification system and admin tools.
+
+REQUIREMENTS:
+
+1. NOTIFICATION ENDPOINTS:
+
+   POST /api/notifications/register (Student only)
+   Body: { fcmToken: "device-token-from-firebase", platform: "android" }
+   Logic:
+   - Update student's fcmToken in database
+   - Return: { success: true }
+
+   POST /api/notifications/send (Coordinator only)
+   Body: {
+     studentId: 5,
+     title: "New Job Posted",
+     body: "Tech Corp is hiring!",
+     data: { jobId: 10, type: "new-job" }
+   }
+   Logic:
+   - Get student's FCM token
+   - Call Firebase Admin SDK to send notification
+   - Log notification in database (optional)
+   - Return: { success: true, messageId: "..." }
+
+   POST /api/notifications/broadcast (Coordinator only)
+   Body: {
+     title: "Deadline Reminder",
+     body: "Apply for Software Engineer role by tomorrow",
+     filters: { year: "Final", department: "Computer Science" },
+     data: { jobId: 10 }
+   }
+   Logic:
+   - Get all students matching filters with fcmTokens
+   - Send notification to all (batch send)
+   - Return: { success: true, sentCount: 45 }
+
+2. FIREBASE ADMIN SDK SETUP:
+   server/services/fcmService.js
+
+   Functions needed:
+   - initializeFirebase() → setup Firebase Admin
+   - sendPushNotification(fcmToken, title, body, data)
+   - sendMulticast(tokens[], title, body, data)
+   - handleErrors (invalid tokens, etc.)
+
+   Use Firebase Admin SDK:
+   - npm install firebase-admin
+   - Download service account JSON from Firebase Console
+   - Store in server/config/firebase-service-account.json (don't commit!)
+
+3. EMAIL SERVICE:
+   server/services/emailService.js
+
+   For MVP, use nodemailer with Gmail SMTP:
+   
+   Functions needed:
+   - sendOTP(email, otp)
+   - sendJobAlert(email, jobDetails)
+   - sendApplicationConfirmation(email, jobTitle)
+   - sendDeadlineReminder(email, jobTitle, daysLeft)
+
+   Email templates (simple HTML):
+   - OTP Email: "Your OTP is: 123456"
+   - Job Alert: "New job posted: [Title] at [Company]"
+   - Application Confirmation: "You applied for [Job] successfully"
+   - Deadline Reminder: "[Job] deadline in [X] days!"
+
+4. NOTIFICATION TRIGGERS:
+
+   Auto-send notifications when:
+   - New job posted → Notify eligible students
+   - Deadline approaching (3 days, 1 day) → Remind students
+   - Application status updated → Notify student
+   - Mandatory form required → Notify all students
+
+   Implement in respective controllers:
+   - jobController.createJob() → call notificationService.notifyNewJob()
+   - applicationController.updateStatus() → call notificationService.notifyStatusUpdate()
+
+5. CRON JOBS (Background Tasks):
+   server/jobs/cronJobs.js
+
+   Use node-cron:
+   
+   Tasks:
+   - Daily at 9 AM: Check deadlines → Send reminders
+   - Daily at midnight: Cleanup expired OTPs
+   - Weekly: Generate analytics reports
+
+   Example:
+   cron.schedule('0 9 * * *', async () => {
+     // Find jobs with deadline in 3 days
+     // Send reminders to students who saved but not applied
+   });
+
+6. ADMIN/COORDINATOR FEATURES:
+
+   GET /api/admin/students (Coordinator only)
+   Query: ?search=name&department=CS&year=Final&page=1
+   Response: Filtered list of students with stats
+   Include: name, rollNo, email, totalApplications, totalOffers
+
+   PUT /api/admin/students/:id (Coordinator only)
+   Body: { name, email, phone, year, department }
+   Logic: Update student details (for corrections)
+
+   GET /api/admin/audit-logs (Admin only)
+   Query: ?userId=5&action=login&startDate=2025-01-01
+   Response: Filtered audit logs
+   Purpose: Track who did what and when
+
+   POST /api/admin/bulk-import (Coordinator only)
+   Body: { students: [{ rollNo, name, email, ... }, ...] }
+   Logic:
+   - Validate CSV data
+   - Bulk insert students
+   - Send welcome emails
+   - Return: { success: 50, failed: 2, errors: [...] }
+
+7. DATA EXPORT (DPDP Compliance):
+
+   GET /api/students/me/export (Student only)
+   Response: Download JSON/PDF with all student data
+   Include: profile, applications, saved jobs, audit logs
+
+   POST /api/students/me/delete (Student only)
+   Logic:
+   - Anonymize student data (name → "Deleted User")
+   - Keep applications for analytics (anonymized)
+   - Log deletion request
+   - Return: { success: true }
+
+8. NOTIFICATION PREFERENCES:
+
+   GET /api/students/me/preferences
+   Response: {
+     pushNotifications: true,
+     emailNotifications: true,
+     whatsappNotifications: false
+   }
+
+   PUT /api/students/me/preferences
+   Body: { pushNotifications: false }
+   Logic: Update student preferences
+   Purpose: DPDP compliance (consent management)
+
+9. ERROR HANDLING:
+   - "FCM token invalid" → Remove token from database
+   - "Email sending failed" → Log error, retry later
+   - "Notification quota exceeded" → Rate limit
+
+10. ENVIRONMENT VARIABLES:
+    Add to .env:
+    FIREBASE_SERVICE_ACCOUNT_PATH=/path/to/service-account.json
+    SMTP_HOST=smtp.gmail.com
+    SMTP_PORT=587
+    SMTP_USER=placement@college.edu
+    SMTP_PASS=your-app-password
+    CRON_ENABLED=true
+
+PACKAGES TO INSTALL:
+- firebase-admin
+- nodemailer
+- node-cron
+- csv-parser (for bulk import)
+- pdfkit (for PDF export)
+
+OUTPUT:
+- Push notifications working
+- Email service integrated
+- Cron jobs for reminders
+- Admin management features
+- Data export for DPDP compliance
+- Notification preferences

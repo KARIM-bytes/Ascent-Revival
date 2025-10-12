@@ -1,0 +1,130 @@
+Add authentication and security features to the existing Campus Placement API.
+
+CONTEXT:
+You have an Express API with Prisma ORM and PostgreSQL. Now add complete authentication flow.
+
+REQUIREMENTS:
+
+1. AUTHENTICATION ENDPOINTS:
+
+   POST /api/auth/request-otp
+   Body: { email: "student@college.edu" }
+   Logic:
+   - Validate email exists in Students table
+   - Generate random 6-digit OTP
+   - Store OTP in OTP table with 10-minute expiry
+   - Send OTP via email (mock for now, just console.log)
+   - Return: { success: true, otpId: 123, message: "OTP sent to email" }
+
+   POST /api/auth/verify-otp
+   Body: { email: "student@college.edu", otp: "123456" }
+   Logic:
+   - Find OTP in database by email
+   - Check if expired (expiresAt < now)
+   - Check if OTP matches
+   - Mark OTP as verified
+   - Generate JWT token with payload: { id: studentId, email, type: "student" }
+   - Return: { token: "jwt...", user: { id, name, email, year, department } }
+
+   POST /api/auth/coordinator/login
+   Body: { email: "placement@college.edu", password: "password123" }
+   Logic:
+   - Find coordinator by email
+   - Compare password using bcrypt
+   - Generate JWT token with payload: { id: coordinatorId, email, type: "coordinator" }
+   - Return: { token: "jwt...", user: { id, name, email, role } }
+
+   GET /api/auth/me (Protected)
+   Headers: Authorization: Bearer <token>
+   Logic:
+   - Verify JWT token
+   - Return current user details based on token type
+   - Return: { user: {...} }
+
+   POST /api/auth/logout
+   Logic:
+   - Blacklist token (store in Redis or database)
+   - Return: { success: true, message: "Logged out successfully" }
+
+2. JWT MIDDLEWARE (server/middleware/auth.js):
+   
+   export const authenticateToken = (req, res, next) => {
+     // Extract token from Authorization header
+     // Verify token using JWT_SECRET
+     // Attach user info to req.user
+     // If invalid/expired, return 401 Unauthorized
+   }
+
+   export const requireStudent = (req, res, next) => {
+     // Check if req.user.type === "student"
+     // If not, return 403 Forbidden
+   }
+
+   export const requireCoordinator = (req, res, next) => {
+     // Check if req.user.type === "coordinator"
+     // If not, return 403 Forbidden
+   }
+
+3. PASSWORD HASHING:
+   - Use bcrypt to hash coordinator passwords
+   - Add utility functions:
+     - hashPassword(password) → hashedPassword
+     - comparePassword(password, hashedPassword) → boolean
+
+4. JWT TOKEN GENERATION:
+   - Use jsonwebtoken library
+   - Token expiry: 7 days for students, 1 day for coordinators
+   - Add utility functions:
+     - generateToken(payload) → token
+     - verifyToken(token) → payload or throws error
+
+5. SECURITY ENHANCEMENTS:
+   - Helmet.js for HTTP headers security
+   - Rate limiting on auth endpoints (max 5 OTP requests per hour per email)
+   - XSS protection (sanitize all inputs)
+   - Add CSRF token support (optional for MVP)
+
+6. OTP UTILITIES (server/utils/otp.js):
+   - generateOTP() → 6-digit random number
+   - createOTP(email) → saves to database, returns otpId
+   - verifyOTP(email, otp) → boolean
+   - cleanupExpiredOTPs() → delete old OTPs (cron job)
+
+7. EMAIL SERVICE (Mock for now):
+   server/services/emailService.js
+   - sendOTP(email, otp) → console.log for now
+   - Later replace with SendGrid/SMTP
+
+8. AUDIT LOGGING:
+   - Log all auth attempts (success/failure)
+   - Log to AuditLog table
+   - Include: userId, action, ipAddress, timestamp
+
+9. ERROR HANDLING:
+   - "Email not found" → 404
+   - "Invalid OTP" → 400
+   - "OTP expired" → 400
+   - "Invalid credentials" → 401
+   - "Token expired" → 401
+   - "Unauthorized" → 403
+
+10. PROTECT EXISTING ROUTES:
+    Update routes/jobs.js:
+    - GET /api/jobs → Public (no auth needed)
+    - POST /api/jobs → requireCoordinator
+    - PUT /api/jobs/:id → requireCoordinator
+    - DELETE /api/jobs/:id → requireCoordinator
+
+PACKAGES TO INSTALL:
+- jsonwebtoken
+- bcrypt
+- helmet
+- express-rate-limit
+- express-mongo-sanitize (or similar)
+
+OUTPUT:
+- Complete authentication system
+- Protected routes with middleware
+- JWT token generation and verification
+- OTP flow working end-to-end
+- Security hardening applied

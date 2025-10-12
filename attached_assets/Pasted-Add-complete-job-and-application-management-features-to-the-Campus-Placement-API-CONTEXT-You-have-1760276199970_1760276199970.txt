@@ -1,0 +1,201 @@
+Add complete job and application management features to the Campus Placement API.
+
+CONTEXT:
+You have authentication working. Now add full CRUD for jobs, applications, and saved jobs.
+
+REQUIREMENTS:
+
+1. JOB ENDPOINTS:
+
+   GET /api/jobs (Public)
+   Query params: 
+   - year=Final (filter by target year)
+   - department=Computer Science (filter by department)
+   - search=software (search in title/company)
+   - page=1, limit=10 (pagination)
+   - sortBy=deadline (sort: deadline, createdAt, company)
+   Response: {
+     jobs: [...],
+     totalCount: 50,
+     currentPage: 1,
+     totalPages: 5
+   }
+
+   GET /api/jobs/:id (Public)
+   Response: Full job details with coordinator info
+
+   POST /api/jobs (Coordinator only)
+   Body: {
+     title: "Software Engineer",
+     company: "Tech Corp",
+     description: "Build amazing apps...",
+     skills: ["React", "Node.js"],
+     deadline: "2025-12-31",
+     targetYears: ["Final"],
+     targetDepts: ["Computer Science", "IT"],
+     mandatory: false,
+     externalLink: "https://techcorp.com/apply",
+     location: "Bangalore",
+     ctc: "8 LPA"
+   }
+   Logic:
+   - Validate all required fields
+   - Set postedBy to coordinator ID from JWT
+   - Save to database
+   - Send push notification to eligible students (call notification service)
+   - Return created job
+
+   PUT /api/jobs/:id (Coordinator only)
+   Body: Same as POST (partial updates allowed)
+   Logic:
+   - Check if job exists
+   - Check if coordinator owns this job
+   - Update job
+   - Log to audit log
+   - Return updated job
+
+   DELETE /api/jobs/:id (Coordinator only)
+   Logic:
+   - Soft delete (set deletedAt timestamp)
+   - Don't actually delete (preserve audit trail)
+   - Return: { success: true }
+
+   GET /api/jobs/:id/applicants (Coordinator only)
+   Response: List of students who applied to this job
+   Include: student info, application status, applied date
+
+2. SAVED JOBS ENDPOINTS (Student only):
+
+   POST /api/jobs/:id/save
+   Logic:
+   - Add to SavedJob table
+   - Prevent duplicates (unique constraint)
+   - Return: { success: true, message: "Job saved" }
+
+   DELETE /api/jobs/:id/unsave
+   Logic:
+   - Remove from SavedJob table
+   - Return: { success: true }
+
+   GET /api/jobs/saved
+   Response: All jobs saved by current student (from JWT)
+
+3. APPLICATION ENDPOINTS (Student only):
+
+   POST /api/applications
+   Body: {
+     jobId: 5,
+     notes: "Applied via college portal"
+   }
+   Logic:
+   - Check if already applied (unique constraint)
+   - Check if deadline passed
+   - Create application with status "Applied"
+   - Log to audit log
+   - Return created application with job details
+
+   GET /api/applications
+   Query params: 
+   - status=Applied (filter by status)
+   - sortBy=deadline (sort)
+   Response: All applications by current student
+   Include: job details, company, deadline, status
+
+   PUT /api/applications/:id/status
+   Body: { status: "Interview", notes: "Interview on Jan 15" }
+   Logic:
+   - Validate status ("Applied", "Interview", "Offer", "Rejected")
+   - Update application
+   - Return updated application
+
+   DELETE /api/applications/:id
+   Logic:
+   - Soft delete application
+   - Return: { success: true }
+
+4. ANALYTICS ENDPOINTS (Coordinator only):
+
+   GET /api/analytics/overview
+   Response: {
+     totalJobs: 50,
+     totalApplications: 234,
+     activeStudents: 89,
+     placementRate: 75,
+     topCompanies: ["Tech Corp", "Startup XYZ"],
+     applicationsByStatus: {
+       Applied: 120,
+       Interview: 45,
+       Offer: 35,
+       Rejected: 34
+     }
+   }
+
+   GET /api/analytics/jobs/:id/stats
+   Response: {
+     jobTitle: "Software Engineer",
+     totalViews: 50,
+     totalSaves: 23,
+     totalApplications: 12,
+     applicationsByDepartment: {
+       "Computer Science": 8,
+       "IT": 4
+     }
+   }
+
+5. BUSINESS LOGIC:
+
+   Job Creation:
+   - Auto-calculate "daysRemaining" field
+   - Validate deadline is in future
+   - Validate externalLink is valid URL
+   - Validate skills array not empty
+
+   Application Submission:
+   - Check if student is eligible (year/department match)
+   - Check if deadline not passed
+   - Prevent duplicate applications
+   - Send confirmation email to student
+
+   Status Update:
+   - Only allow valid status transitions:
+     Applied → Interview → Offer/Rejected
+   - Log all status changes to audit log
+
+6. VALIDATION RULES:
+   - Job title: 3-100 characters
+   - Company: 2-100 characters
+   - Description: 10-2000 characters
+   - Skills: 1-10 items, each 2-30 characters
+   - Deadline: Must be future date
+   - External link: Valid URL format
+
+7. FILTERING & SEARCH:
+   - Implement case-insensitive search
+   - Search across title, company, description
+   - Filter by multiple criteria (year AND department)
+   - Sort by deadline (ascending), createdAt (descending)
+
+8. PAGINATION:
+   - Default limit: 20 items per page
+   - Max limit: 100 items per page
+   - Return total count for frontend
+
+9. ERROR HANDLING:
+   - "Job not found" → 404
+   - "Already applied" → 400
+   - "Deadline passed" → 400
+   - "Not eligible for this job" → 403
+   - "Unauthorized to edit job" → 403
+
+10. PERFORMANCE:
+    - Add database indexes on: email, year, department, deadline
+    - Use Prisma "include" to reduce N+1 queries
+    - Cache frequently accessed data (optional)
+
+OUTPUT:
+- Complete job CRUD operations
+- Application management system
+- Saved jobs functionality
+- Analytics for coordinators
+- Proper validation and error handling
+- Optimized database queries
