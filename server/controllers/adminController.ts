@@ -1,10 +1,8 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { ApiErrorClass } from '../middleware/errorHandler';
 import { hashPassword } from '../utils/password';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export async function getAllStudents(req: AuthRequest, res: Response) {
   try {

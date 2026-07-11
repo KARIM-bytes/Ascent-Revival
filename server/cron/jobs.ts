@@ -1,9 +1,7 @@
 import cron from 'node-cron';
-import { PrismaClient } from '@prisma/client';
 import { cleanupExpiredOTPs } from '../utils/otp';
 import { sendDeadlineReminder } from '../services/emailService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 // Clean up expired OTPs every hour
 export function startOTPCleanup() {

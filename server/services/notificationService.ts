@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { sendJobAlert } from './emailService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 // Mock push notification service
 // In production, integrate Firebase Admin SDK

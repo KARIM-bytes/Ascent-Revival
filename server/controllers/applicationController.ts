@@ -1,11 +1,9 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { ApiErrorClass } from '../middleware/errorHandler';
 import { sendApplicationConfirmation } from '../services/emailService';
 import { notifyApplicationStatusUpdate } from '../services/notificationService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export async function applyForJob(req: AuthRequest, res: Response) {
   try {

@@ -32,6 +32,16 @@ async function main() {
   const students = await Promise.all([
     prisma.students.create({
       data: {
+        rollNo: 'CS2021000',
+        name: 'Test Student',
+        email: 'student@college.edu',
+        phone: '+91-9999999999',
+        year: 'Final',
+        department: 'Computer Science',
+      },
+    }),
+    prisma.students.create({
+      data: {
         rollNo: 'CS2021001',
         name: 'Rahul Sharma',
         email: 'rahul@college.edu',

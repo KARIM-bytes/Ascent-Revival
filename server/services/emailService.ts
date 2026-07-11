@@ -1,51 +1,69 @@
 import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 
-// Mock email service - will use console.log for now
-// Replace with actual SMTP configuration in production
+const FROM_ADDRESS = process.env.SMTP_FROM || '"Campus Placement" <placement@college.edu>';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER || 'placement@college.edu',
-    pass: process.env.SMTP_PASS || 'your-app-password',
-  },
-});
-
-export async function sendOTP(email: string, otp: string): Promise<void> {
-  console.log(`📧 Sending OTP to ${email}: ${otp}`);
-  
-  // For MVP, just log the OTP
-  // In production, uncomment below to send actual email
-  
-  /*
-  try {
-    await transporter.sendMail({
-      from: '"Campus Placement" <placement@college.edu>',
-      to: email,
-      subject: 'Your OTP for Campus Placement Login',
-      html: `
-        <h2>Your OTP Code</h2>
-        <p>Your OTP is: <strong>${otp}</strong></p>
-        <p>This OTP will expire in 10 minutes.</p>
-        <p>If you didn't request this, please ignore this email.</p>
-      `,
-    });
-  } catch (error) {
-    console.error('Error sending OTP email:', error);
-    throw error;
-  }
-  */
+// SMTP is considered configured only when real credentials are provided
+// (not the placeholder values shipped in .env.example).
+function smtpConfigured(): boolean {
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  return Boolean(user && pass && !user.startsWith('your-') && !pass.startsWith('your-'));
 }
 
+let transporter: Transporter | null = null;
+
+function getTransporter(): Transporter {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: process.env.SMTP_PORT === '465',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  }
+  return transporter;
+}
+
+export async function sendOTP(email: string, otp: string): Promise<void> {
+  if (!smtpConfigured()) {
+    if (process.env.NODE_ENV === 'production') {
+      // Never silently swallow OTPs in production — login would be impossible.
+      throw new Error('SMTP is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASS.');
+    }
+    console.log(`📧 [DEV ONLY — SMTP not configured] OTP for ${email}: ${otp}`);
+    return;
+  }
+
+  await getTransporter().sendMail({
+    from: FROM_ADDRESS,
+    to: email,
+    subject: 'Your OTP for Campus Placement Login',
+    html: `
+      <h2>Your OTP Code</h2>
+      <p>Your OTP is: <strong>${otp}</strong></p>
+      <p>This OTP will expire in ${process.env.OTP_EXPIRY_MINUTES || 10} minutes.</p>
+      <p>If you didn't request this, please ignore this email.</p>
+    `,
+  });
+}
+
+// The notification emails below are best-effort: a failure should never
+// break the main flow (job creation, application submission), so errors
+// are logged rather than rethrown.
+
 export async function sendJobAlert(email: string, jobDetails: { title: string; company: string; deadline: Date }): Promise<void> {
-  console.log(`📧 Sending job alert to ${email}: ${jobDetails.title} at ${jobDetails.company}`);
-  
-  /*
+  if (!smtpConfigured()) {
+    console.log(`📧 [SMTP not configured] Job alert for ${email}: ${jobDetails.title} at ${jobDetails.company}`);
+    return;
+  }
+
   try {
-    await transporter.sendMail({
-      from: '"Campus Placement" <placement@college.edu>',
+    await getTransporter().sendMail({
+      from: FROM_ADDRESS,
       to: email,
       subject: `New Job Posted: ${jobDetails.title}`,
       html: `
@@ -58,16 +76,17 @@ export async function sendJobAlert(email: string, jobDetails: { title: string; c
   } catch (error) {
     console.error('Error sending job alert:', error);
   }
-  */
 }
 
 export async function sendApplicationConfirmation(email: string, jobTitle: string): Promise<void> {
-  console.log(`📧 Sending application confirmation to ${email} for ${jobTitle}`);
-  
-  /*
+  if (!smtpConfigured()) {
+    console.log(`📧 [SMTP not configured] Application confirmation for ${email}: ${jobTitle}`);
+    return;
+  }
+
   try {
-    await transporter.sendMail({
-      from: '"Campus Placement" <placement@college.edu>',
+    await getTransporter().sendMail({
+      from: FROM_ADDRESS,
       to: email,
       subject: 'Application Submitted Successfully',
       html: `
@@ -79,16 +98,17 @@ export async function sendApplicationConfirmation(email: string, jobTitle: strin
   } catch (error) {
     console.error('Error sending application confirmation:', error);
   }
-  */
 }
 
 export async function sendDeadlineReminder(email: string, jobTitle: string, daysLeft: number): Promise<void> {
-  console.log(`📧 Sending deadline reminder to ${email}: ${jobTitle} (${daysLeft} days left)`);
-  
-  /*
+  if (!smtpConfigured()) {
+    console.log(`📧 [SMTP not configured] Deadline reminder for ${email}: ${jobTitle} (${daysLeft} days left)`);
+    return;
+  }
+
   try {
-    await transporter.sendMail({
-      from: '"Campus Placement" <placement@college.edu>',
+    await getTransporter().sendMail({
+      from: FROM_ADDRESS,
       to: email,
       subject: `Reminder: ${jobTitle} Deadline in ${daysLeft} Days`,
       html: `
@@ -100,5 +120,4 @@ export async function sendDeadlineReminder(email: string, jobTitle: string, days
   } catch (error) {
     console.error('Error sending deadline reminder:', error);
   }
-  */
 }

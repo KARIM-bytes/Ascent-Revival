@@ -1,13 +1,11 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { generateToken } from '../utils/jwt';
 import { comparePassword } from '../utils/password';
 import { createOTP, verifyOTP } from '../utils/otp';
 import { sendOTP } from '../services/emailService';
 import { ApiErrorClass } from '../middleware/errorHandler';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export async function requestOTP(req: AuthRequest, res: Response) {
   try {

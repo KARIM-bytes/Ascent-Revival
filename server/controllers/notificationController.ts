@@ -1,10 +1,8 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { ApiErrorClass } from '../middleware/errorHandler';
 import { sendPushNotification, sendMulticast } from '../services/notificationService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export async function updateFCMToken(req: AuthRequest, res: Response) {
   try {

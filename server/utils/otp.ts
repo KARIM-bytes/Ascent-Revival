@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
