@@ -8,6 +8,10 @@ import { serveStatic } from "./vite";
 
 const app = express();
 
+// Behind Render/most PaaS proxies: trust the first proxy hop so req.ip
+// (and therefore rate limiting) sees the real client IP.
+app.set('trust proxy', 1);
+
 // Fail fast on missing secrets instead of falling back to insecure defaults.
 if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET must be set. Add it to your environment or .env file.');
