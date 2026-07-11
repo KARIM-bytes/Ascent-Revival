@@ -33,27 +33,43 @@ function getTransporter(): Transporter {
   return transporter;
 }
 
+// TEMPORARY demo escape hatch: with OTP_EMAIL_BEST_EFFORT=true the OTP
+// request still succeeds when email delivery fails (the code is in the
+// DB; an admin can read it out). Remove once a working SMTP provider is
+// configured — with this on, students get no email and no error either.
+function bestEffort(): boolean {
+  return process.env.OTP_EMAIL_BEST_EFFORT === 'true';
+}
+
 export async function sendOTP(email: string, otp: string): Promise<void> {
   if (!smtpConfigured()) {
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === 'production' && !bestEffort()) {
       // Never silently swallow OTPs in production — login would be impossible.
       throw new Error('SMTP is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASS.');
     }
-    console.log(`📧 [DEV ONLY — SMTP not configured] OTP for ${email}: ${otp}`);
+    console.log(`📧 [email disabled] OTP for ${email}: ${otp}`);
     return;
   }
 
-  await getTransporter().sendMail({
-    from: FROM_ADDRESS,
-    to: email,
-    subject: 'Your OTP for Campus Placement Login',
-    html: `
-      <h2>Your OTP Code</h2>
-      <p>Your OTP is: <strong>${otp}</strong></p>
-      <p>This OTP will expire in ${process.env.OTP_EXPIRY_MINUTES || 10} minutes.</p>
-      <p>If you didn't request this, please ignore this email.</p>
-    `,
-  });
+  try {
+    await getTransporter().sendMail({
+      from: FROM_ADDRESS,
+      to: email,
+      subject: 'Your OTP for Campus Placement Login',
+      html: `
+        <h2>Your OTP Code</h2>
+        <p>Your OTP is: <strong>${otp}</strong></p>
+        <p>This OTP will expire in ${process.env.OTP_EXPIRY_MINUTES || 10} minutes.</p>
+        <p>If you didn't request this, please ignore this email.</p>
+      `,
+    });
+  } catch (error) {
+    if (bestEffort()) {
+      console.error(`OTP email to ${email} failed (best-effort mode, OTP is in DB):`, error);
+      return;
+    }
+    throw error;
+  }
 }
 
 // The notification emails below are best-effort: a failure should never

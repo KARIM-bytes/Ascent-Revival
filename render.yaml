@@ -31,3 +31,8 @@ services:
         sync: false
       - key: OTP_EXPIRY_MINUTES
         value: "10"
+      # TEMPORARY until SMTP works from Render (free tier blocks 25/465/587):
+      # OTP requests succeed even when the email can't be sent; codes are
+      # read from the DB by an admin. Set to "false" once SMTP is fixed.
+      - key: OTP_EMAIL_BEST_EFFORT
+        value: "true"
