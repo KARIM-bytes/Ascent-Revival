@@ -1,31 +1,31 @@
 services:
   - type: web
-    name: campus-placement-api
-    runtime: node
-    # Free tier spins down after 15 min idle (cold starts ~50s, cron
-    # reminders unreliable). Upgrade to "starter" for always-on.
-    plan: free
-    buildCommand: npm ci && npm run build && npx prisma migrate deploy
-    startCommand: npm start
-    healthCheckPath: /api/health
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        sync: false # paste your Neon connection string in the dashboard
-      - key: JWT_SECRET
-        generateValue: true # Render generates a strong random value
-      - key: CORS_ORIGIN
-        value: https://campus-placement-api.onrender.com
-      - key: SMTP_HOST
-        sync: false
-      - key: SMTP_PORT
-        value: "587"
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASS
-        sync: false
-      - key: SMTP_FROM
-        sync: false
-      - key: OTP_EXPIRY_MINUTES
-        value: "10"
+      name: campus-placement-api
+          runtime: node
+              # Free tier spins down after 15 min idle (cold starts ~50s, cron
+                  # reminders unreliable). Upgrade to "starter" for always-on.
+                      plan: free
+                          buildCommand: NODE_ENV=development npm ci && npm run build && npx prisma migrate deploy
+                              startCommand: npm start
+                                  healthCheckPath: /api/health
+                                      envVars:
+                                            - key: NODE_ENV
+                                                    value: production
+                                                          - key: DATABASE_URL
+                                                                  sync: false # paste your Neon connection string in the dashboard
+                                                                        - key: JWT_SECRET
+                                                                                generateValue: true # Render generates a strong random value
+                                                                                      - key: CORS_ORIGIN
+                                                                                              value: https://campus-placement-api.onrender.com
+                                                                                                    - key: SMTP_HOST
+                                                                                                            sync: false
+                                                                                                                  - key: SMTP_PORT
+                                                                                                                          value: "587"
+                                                                                                                                - key: SMTP_USER
+                                                                                                                                        sync: false
+                                                                                                                                              - key: SMTP_PASS
+                                                                                                                                                      sync: false
+                                                                                                                                                            - key: SMTP_FROM
+                                                                                                                                                                    sync: false
+                                                                                                                                                                          - key: OTP_EXPIRY_MINUTES
+                                                                                                                                                                                  value: "10"
