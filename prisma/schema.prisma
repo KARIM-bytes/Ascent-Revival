@@ -56,6 +56,7 @@ model Job {
   externalLink String
   location     String?
   ctc          String?       // "8 LPA" or "Unpaid Internship"
+  source       String        @default("campus") // "campus" | "external" (e.g. LinkedIn)
   postedBy     Int
   coordinator  Coordinators  @relation(fields: [postedBy], references: [id])
   deletedAt    DateTime?     // For soft delete

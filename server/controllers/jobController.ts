@@ -131,8 +131,11 @@ export async function createJob(req: AuthRequest, res: Response) {
       },
     });
 
-    // Send notifications to eligible students
-    await notifyNewJob(job.id);
+    // Notify eligible students in the background — job creation must not
+    // block on (possibly slow/unavailable) email delivery.
+    notifyNewJob(job.id).catch((err) =>
+      console.error('notifyNewJob failed:', err),
+    );
 
     res.status(201).json(job);
   } catch (error: any) {

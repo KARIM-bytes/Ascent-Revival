@@ -77,14 +77,16 @@ export async function notifyNewJob(jobId: number): Promise<void> {
     },
   });
 
-  // Send email alerts
-  for (const student of students) {
-    await sendJobAlert(student.email, {
-      title: job.title,
-      company: job.company,
-      deadline: job.deadline,
-    });
-  }
+  // Send email alerts in parallel; sendJobAlert is best-effort and never throws.
+  await Promise.allSettled(
+    students.map((student) =>
+      sendJobAlert(student.email, {
+        title: job.title,
+        company: job.company,
+        deadline: job.deadline,
+      }),
+    ),
+  );
 
   // Send push notifications to students with FCM tokens
   const studentsWithTokens = students.filter(s => s.fcmToken);

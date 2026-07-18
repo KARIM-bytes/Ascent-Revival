@@ -26,6 +26,9 @@ export const jobSchema = Joi.object({
   externalLink: Joi.string().uri().required(),
   location: Joi.string().max(255).optional(),
   ctc: Joi.string().max(100).optional(),
+  // "campus" = coordinator drive (apply in-app);
+  // "external" = scraped listing (apply via externalLink)
+  source: Joi.string().valid('campus', 'external').default('campus'),
 });
 
 export const applicationSchema = Joi.object({

@@ -13,3 +13,6 @@ vite.config.ts.*
 .local/
 .config/
 .upm/
+
+# Local admin helper for reading OTPs (never commit)
+get-otp.ts
